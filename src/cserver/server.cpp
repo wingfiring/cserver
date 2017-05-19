@@ -149,9 +149,7 @@ namespace csrv{
 
 					}
 					sleep_for_(K_retry_sleep_time, yield);
-
 				}
-
 			}
 			void do_accept_(boost::asio::yield_context yield){
 
