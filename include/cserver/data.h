@@ -5,6 +5,7 @@
 #include <cstdint>
 #include <boost/optional.hpp>
 #include <string>
+#include <vector>
 
 namespace csrv{
 	//immeAPP
@@ -54,5 +55,7 @@ namespace csrv{
 
 	bool parse_json(app_t& ret, const std::string& json, const std::string& root);
 	bool parse_json(mote_t& ret, const std::string& json, const std::string& root = "mote");
+	bool base64_decode(const std::string& input, std::vector<char>& buf);
+	std::string base64_encode(const char* buf, size_t n);
 }
 #endif //end CSERVER_DATA_H_

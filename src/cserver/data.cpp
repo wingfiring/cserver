@@ -92,6 +92,15 @@ namespace csrv{
 		}catch(...){}
 		return false;
 	}
+
+#if 0
+	bool base64_decode(const std::string& input, std::vector<char>& buf){
+
+	}
+	std::string base64_encode(const char* buf, size_t n){
+
+	}
+#endif
 }
 
 
