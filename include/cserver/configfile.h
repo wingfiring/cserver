@@ -13,6 +13,7 @@ namespace csrv{
 
 		int heartbeat;	// in seconds, default 10s
 		int aserver_retry_sleep;	// sleep time on reading error from aserver, default 5s
+		int log_level;
 
 	};
 

@@ -1,4 +1,5 @@
 #include <cserver/server.h>
+#include <cserver/data.h>
 
 #include <boost/asio.hpp>
 #include <boost/asio/io_service.hpp>
@@ -109,10 +110,11 @@ namespace csrv{
 						if (!ec) break;
 					}
 					if (ec || !socket.is_open()){
-						BOOST_LOG_TRIVIAL(warning) <<"Failed to connect to CServer site" << config.aserver_site << ":" << config.aserver_port;
+						BOOST_LOG_TRIVIAL(warning) <<"Failed to connect to CServer site " << config.aserver_site << ":" << config.aserver_port;
 						sleep_for_(K_retry_sleep_time, yield);
 						continue;
 					}
+					BOOST_LOG_TRIVIAL(info) <<"Connected to CServer site " << config.aserver_site << ":" << config.aserver_port;
 
 					auto heatbeat_time = std::chrono::steady_clock::now();
 					for(;;){
@@ -123,6 +125,7 @@ namespace csrv{
 								break;
 							}
 							heatbeat_time += K_HeartbeatTimeout;
+							BOOST_LOG_TRIVIAL(debug) <<"Heartbeat sent.";
 						}
 
 						Header head;
@@ -139,14 +142,54 @@ namespace csrv{
 							break;
 						}
 
-						if(buf.back() != 0xf0){
-							BOOST_LOG_TRIVIAL(warning) <<"Bad end flag: 0x" << std::hex << buf.back();
+						unsigned char end_flag(buf.back());
+						if(end_flag != 0xf0){
+							BOOST_LOG_TRIVIAL(warning) <<"Bad end flag: 0x" << std::hex << uint32_t(end_flag);
 							break;
 						}
 
-						buf.resize(buf.size() - 1);
-						if (!parse_json_(buf)) break;
+						BOOST_LOG_TRIVIAL(debug) <<"Package received, command is 0x" << std::hex << uint32_t(head.head.command);
 
+						buf.resize(buf.size() - 1);
+						std::string text(buf.begin(), buf.end());
+
+
+						if (head.head.command == 0xe0){
+							if (text != "ASHeart"){
+								BOOST_LOG_TRIVIAL(warning) <<"Bad heartbeat: " << text;
+								break;
+							}
+							BOOST_LOG_TRIVIAL(debug) <<"Heartbeat received.";
+						}else if (head.head.command == 0xe1){
+							app_t app;
+							if (!parse_json(app, text)){
+								BOOST_LOG_TRIVIAL(warning) <<"Failed to parse JSON: " << text;
+								break;
+							}
+
+							if (app.userdata){
+								auto& udata = *app.userdata;
+								std::vector<uint8_t> buf;
+								if (base64_decode(udata.payload, buf)){
+										std::stringstream sstr;
+
+										sstr << "Payload (size=" << buf.size() << "):[";
+										for(auto ch : buf)
+											sstr << ' ' << std::setfill('0') << std::setw(2) << std::hex << uint32_t(ch);
+										sstr << " ]";
+										if (!buf.empty() && *buf.begin() == 0x02)
+											BOOST_LOG_TRIVIAL(info) << sstr.str();
+										else
+											BOOST_LOG_TRIVIAL(debug) << sstr.str();
+										parse_payload(buf);
+								}
+								else
+									BOOST_LOG_TRIVIAL(warning) <<"Bad base64 encoded payload: " << udata.payload;
+							}
+							else {
+								BOOST_LOG_TRIVIAL(warning) <<"No userdata.";
+							}
+						}
 					}
 					sleep_for_(K_retry_sleep_time, yield);
 				}
@@ -201,8 +244,39 @@ namespace csrv{
 				}
 				return false;
 			}
-			bool parse_json_(const std::vector<char>& ){
-				return true;
+			void parse_payload(const std::vector<uint8_t>& data){
+				auto end = data.end();
+				for(auto itr =  data.begin(); itr != end;){
+					auto cmd = *itr;
+					if (cmd != 0x02 || ++itr == end) break;
+					auto len = *itr++;
+					if (len > (end - itr))	break;	// no enough value data
+
+					node_info_t node;
+					parse_node_info(&*itr, len, node);
+					print_node(node);
+
+					itr += len;
+				}
+			}
+			void print_node(const node_info_t& node){
+				std::stringstream sstr;
+				sstr << "not_info:{";
+
+				sstr 
+					<< " light_pwm:" << uint32_t(node.light_pwm)
+					<< " voltage:" << uint32_t(node.voltage)
+					<< " current:" << uint32_t(node.current)
+					<< " power:" << uint32_t(node.power)
+					<< " energy:" << uint32_t(node.energy)
+					<< " x-axis:" << int32_t(node.x_axis)
+					<< " y-axis:" << int32_t(node.y_axis)
+					<< " z-axis:" << int32_t(node.z_axis)
+					<< " als:" << int32_t(node.als)
+					<< " lcm:" << int32_t(node.lcm)
+
+					<< " }";
+				BOOST_LOG_TRIVIAL(info) << sstr.str();
 
 			}
 	};

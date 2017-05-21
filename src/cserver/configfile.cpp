@@ -17,13 +17,14 @@ namespace csrv{
 
 		cfg.aserver_site = pt.get<std::string>("aserver_site", "");
 		cfg.aserver_port = pt.get<std::string>("aserver_port", "");
-		cfg.cserver_addr = pt.get<std::string>("cserver_addr", "0.0.0.0");
+		cfg.cserver_addr = pt.get<std::string>("cserver_addr", "127.0.0.1");
 		cfg.cserver_port = pt.get<std::string>("cserver_port", "8000");
 
 		cfg.log_file = pt.get<std::string>("log_file", "/tmp/cserver.log");
 
 		cfg.heartbeat = pt.get<int>("heartbeat", 10);
 		cfg.aserver_retry_sleep = pt.get<int>("aserver_site", 5);
+		cfg.log_level = pt.get<int>("log_level", 2);
 	}
 
 	void saveConfig(const Config& cfg, const std::string& path){
@@ -36,5 +37,6 @@ namespace csrv{
 		pt.put("log_file", cfg.log_file);
 		pt.put("heartbeat", cfg.heartbeat);
 		pt.put("aserver_retry_sleep", cfg.aserver_retry_sleep);
+		pt.put("log_level", cfg.log_level);
 	}
 }

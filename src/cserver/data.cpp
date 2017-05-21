@@ -1,17 +1,29 @@
 #include <cserver/data.h>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/property_tree/ptree.hpp>
+
+#include <boost/archive/iterators/binary_from_base64.hpp>
+#include <boost/archive/iterators/base64_from_binary.hpp>
+#include <boost/archive/iterators/transform_width.hpp>
+#include <boost/algorithm/string.hpp>
+
 #include <sstream>
+#include <iostream>
 
 namespace csrv{
-	bool do_parse_json(app_t& ret, const std::string& json, const std::string& root){
+	static const std::string app("app");
+	static const std::string immeApp("immeAPP");
+	bool do_parse_json(app_t& ret, const std::string& json){
 		boost::property_tree::ptree pt;
 		std::stringstream sstr(json);
 		read_json(sstr, pt);
 
-		auto itr = pt.find(root);
-		if (itr == pt.not_found())
-			return false;
+		auto itr = pt.find(immeApp);
+		if (itr == pt.not_found()){
+			itr = pt.find(app);
+			if (itr == pt.not_found())
+				return false;
+		}
 
 		auto& node = itr->second;
 		ret.moteeui = node.get<uint64_t>("moteeui");
@@ -28,7 +40,7 @@ namespace csrv{
 			udata.port = unode.get<uint8_t>("port");
 			udata.payload = unode.get<std::string>("payload");
 
-			auto& mnode = node.get_child("motetx");
+			auto& mnode = unode.get_child("motetx");
 			auto& motetx = udata.motetx;
 			motetx.freq = mnode.get<float>("freq");
 			motetx.modu = mnode.get<std::string>("modu");
@@ -56,7 +68,6 @@ namespace csrv{
 		}
 
 		return true;
-
 	}
 
 	bool do_parse_json(mote_t& ret, const std::string& json, const std::string& root){
@@ -67,7 +78,6 @@ namespace csrv{
 		auto itr = pt.find(root);
 		if (itr == pt.not_found())
 			return false;
-
 
 		auto& node = itr->second;
 		ret.eui = node.get<uint64_t>("eui");
@@ -80,9 +90,25 @@ namespace csrv{
 		return true;
 	}
 
-	bool parse_json(app_t& ret, const std::string& json, const std::string& root){
+	node_info_t::node_info_t(){
+		memset(this, 0, sizeof(*this));
+	}
+	void parse_node_info(const uint8_t* data, size_t len, node_info_t& node){
+		extract(data, len, node.light_pwm);
+		extract(data, len, node.voltage);
+		extract(data, len, node.current);
+		extract(data, len, node.power);
+		extract(data, len, node.energy);
+		extract(data, len, node.x_axis);
+		extract(data, len, node.y_axis);
+		extract(data, len, node.z_axis);
+		extract(data, len, node.als);
+		extract(data, len, node.lcm);
+	}
+	bool parse_json(app_t& ret, const std::string& json){
+
 		try{
-			return do_parse_json(ret, json, root);
+			return do_parse_json(ret, json);
 		}catch(...){}
 		return false;
 	}
@@ -93,14 +119,28 @@ namespace csrv{
 		return false;
 	}
 
-#if 0
-	bool base64_decode(const std::string& input, std::vector<char>& buf){
-
+	bool base64_decode(const std::string& input, std::vector<uint8_t>& buf){
+		using namespace boost::archive::iterators;
+		using It =  transform_width<binary_from_base64<std::string::const_iterator>, 8, 6>;  
+		try {  
+			std::copy(It(input.begin()), It(input.end()), std::back_inserter(buf));  
+			return true;
+		} catch(...) {  
+		}  
+		return false;  
 	}
 	std::string base64_encode(const char* buf, size_t n){
+		using namespace boost::archive::iterators;
+		using It = base64_from_binary<transform_width<const char*, 6, 8> >;  
 
+		std::string result;
+		std::copy(It(buf) , It(buf + n), std::back_inserter(result));  
+
+		auto equal_count = (3 - n % 3) % 3;
+		result.resize(result.size() + equal_count, '=');
+
+		return result;
 	}
-#endif
 }
 
 

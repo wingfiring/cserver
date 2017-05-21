@@ -9,20 +9,17 @@
 #include <string>
 
 
-int main(){
+int main(int argc, char** argv){
+	if (argc != 2){
+		std::cout << "Usage cserver <config file>\n";
+		return 1;
+	}
 	csrv::Config config;
+	csrv::loadConfig(config, argv[1]);
 	csrv::Server server(config);
-	csrv::init_log("/tmp/cserver", boost::log::trivial::severity_level::info);
+	csrv::init_log("/tmp/cserver.log", boost::log::trivial::severity_level::info);
 
 	server.start();
-
-	std::string text;
-
-	while((std::cin >> text)){
-		if (text == "quit")
-			break;
-	};
-	server.stop();
 
 	std::cout << "Bye.\n";
 }
