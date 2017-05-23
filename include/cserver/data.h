@@ -94,7 +94,7 @@ namespace csrv{
 
 	void parse_node_info(const uint8_t* data, size_t len, node_info_t& node);
 
-	bool parse_json(app_t& ret, const std::string& json);
+	bool parse_json(app_t& ret, const std::string& json, std::string& app);
 	bool parse_json(mote_t& ret, const std::string& json, const std::string& root = "mote");
 	bool base64_decode(const std::string& input, std::vector<uint8_t>& buf);
 	std::string base64_encode(const char* buf, size_t n);

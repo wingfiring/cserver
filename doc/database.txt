@@ -1,0 +1,42 @@
+create table IF NOT EXISTS t_device (
+id BIGSERIAL primary key,
+log_time timestamp default now(),
+moteeui bigint not null,
+gweui   bigint,
+seqno int,
+light_pwm int,
+voltage	int,
+current int,
+power	int,
+energy	int,
+x_axis	int,
+y_axis	int,
+z_axis	int,
+als		int,
+lcm		int
+);
+create index idx_t_device_log_time on t_device (log_time);
+create index idx_t_device_moteeui on t_device (moteeui);
+create index idx_t_device_seqno on t_device (seqno);
+
+
+test inset:
+
+insert into t_device(moteeui, gweui,seqno,light_pwm,voltage,current,power,energy,x_axis,y_axis,z_axis,als,lcm) values(11111, 22222,1,0,202,1,0,0,0,0,0,0,0);
+
+colums from:
+		uint8_t	light_pwm;
+		uint32_t voltage;
+		uint32_t current;
+		uint32_t power;
+		uint32_t energy;
+		int16_t x_axis;
+		int16_t y_axis;
+		int16_t z_axis;
+		int16_t als;
+		int8_t lcm;
+
+
+id := v.ImmeApp.Moteeui		//big int	
+gwid := v.ImmeApp.Gwrx[0].Eui	//bigint
+seqno : v.ImmeApp.userdata.seqno //int

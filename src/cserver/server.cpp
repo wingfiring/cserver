@@ -162,26 +162,29 @@ namespace csrv{
 							BOOST_LOG_TRIVIAL(debug) <<"Heartbeat received.";
 						}else if (head.head.command == 0xe1){
 							app_t app;
-							if (!parse_json(app, text)){
+							std::string which_app;
+							if (!parse_json(app, text, which_app)){
 								BOOST_LOG_TRIVIAL(warning) <<"Failed to parse JSON: " << text;
 								break;
 							}
+							if (which_app != "immeAPP")	continue;
 
-							if (app.userdata){
+							if (app.userdata ){
 								auto& udata = *app.userdata;
 								std::vector<uint8_t> buf;
 								if (base64_decode(udata.payload, buf)){
 										std::stringstream sstr;
-
 										sstr << "Payload (size=" << buf.size() << "):[";
 										for(auto ch : buf)
 											sstr << ' ' << std::setfill('0') << std::setw(2) << std::hex << uint32_t(ch);
 										sstr << " ]";
-										if (!buf.empty() && *buf.begin() == 0x02)
+										if (!buf.empty() && *buf.begin() == 0x02){
+											BOOST_LOG_TRIVIAL(info) <<"JSON: " << text;
 											BOOST_LOG_TRIVIAL(info) << sstr.str();
+											parse_payload(buf);
+										}
 										else
 											BOOST_LOG_TRIVIAL(debug) << sstr.str();
-										parse_payload(buf);
 								}
 								else
 									BOOST_LOG_TRIVIAL(warning) <<"Bad base64 encoded payload: " << udata.payload;
@@ -261,7 +264,7 @@ namespace csrv{
 			}
 			void print_node(const node_info_t& node){
 				std::stringstream sstr;
-				sstr << "not_info:{";
+				sstr << "node_info:{";
 
 				sstr 
 					<< " light_pwm:" << uint32_t(node.light_pwm)

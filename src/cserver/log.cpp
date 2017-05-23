@@ -39,6 +39,7 @@ namespace csrv{
 
 	void init_log(const std::string& path, int level_)
 	{	 
+
 		auto level = boost::log::trivial::severity_level(level_);
 
 		namespace sinks = boost::log::sinks;
@@ -46,10 +47,13 @@ namespace csrv{
 		namespace expr = boost::log::expressions;
 		namespace attrs = boost::log::attributes;
 		namespace keywords = boost::log::keywords;
+
+		logging::core::get()->add_global_attribute( "TimeStamp", attrs::utc_clock());
+
 		logging::add_common_attributes();
 
 		auto format = (expr::stream 
-				<<  expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "[%Y-%m-%d %H:%M:%S.%f] [") 
+				<<  expr::format_date_time< boost::posix_time::ptime >("TimeStamp", "[%Y-%m-%d %H:%M:%S.%f UTC] [") 
 				<< expr::attr< boost::log::trivial::severity_level, severity_tag >("Severity")  << "]: " 
 				<< expr::smessage);
 

@@ -13,7 +13,7 @@
 namespace csrv{
 	static const std::string app("app");
 	static const std::string immeApp("immeAPP");
-	bool do_parse_json(app_t& ret, const std::string& json){
+	bool do_parse_json(app_t& ret, const std::string& json, std::string& which_app){
 		boost::property_tree::ptree pt;
 		std::stringstream sstr(json);
 		read_json(sstr, pt);
@@ -23,7 +23,10 @@ namespace csrv{
 			itr = pt.find(app);
 			if (itr == pt.not_found())
 				return false;
+			which_app = app;
 		}
+		else
+			which_app = immeApp;
 
 		auto& node = itr->second;
 		ret.moteeui = node.get<uint64_t>("moteeui");
@@ -105,10 +108,10 @@ namespace csrv{
 		extract(data, len, node.als);
 		extract(data, len, node.lcm);
 	}
-	bool parse_json(app_t& ret, const std::string& json){
+	bool parse_json(app_t& ret, const std::string& json, std::string& app){
 
 		try{
-			return do_parse_json(ret, json);
+			return do_parse_json(ret, json, app);
 		}catch(...){}
 		return false;
 	}
