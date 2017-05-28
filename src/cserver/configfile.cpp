@@ -25,6 +25,10 @@ namespace csrv{
 		cfg.heartbeat = pt.get<int>("heartbeat", 10);
 		cfg.aserver_retry_sleep = pt.get<int>("aserver_site", 5);
 		cfg.log_level = pt.get<int>("log_level", 2);
+		cfg.connect_timeout = pt.get<int>("connect_timeout", 60);
+		cfg.read_timeout = pt.get<int>("read_timeout", 300);
+
+		cfg.db_string = pt.get<std::string>("db_string");
 	}
 
 	void saveConfig(const Config& cfg, const std::string& path){
@@ -38,5 +42,9 @@ namespace csrv{
 		pt.put("heartbeat", cfg.heartbeat);
 		pt.put("aserver_retry_sleep", cfg.aserver_retry_sleep);
 		pt.put("log_level", cfg.log_level);
+
+		pt.put("connect_timeout", cfg.connect_timeout);
+		pt.put("read_timeout", cfg.read_timeout);
+		pt.put("db_string", cfg.db_string);
 	}
 }

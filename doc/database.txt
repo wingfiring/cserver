@@ -1,9 +1,20 @@
 create table IF NOT EXISTS t_device (
 id BIGSERIAL primary key,
 log_time timestamp default now(),
+rtime timestamp, 	-- time from gateway or device
+rtime_from	bool,	-- true from gateway, false for from device
 moteeui bigint not null,
 gweui   bigint,
-seqno int,
+seqno 	int,
+rfchan	int,
+chan	bigint,
+freq	float,
+modu	varchar(128),
+datr	varchar(128),
+adr		bool,
+sf		int,
+rssi	float,
+snr		float,
 light_pwm int,
 voltage	int,
 current int,
@@ -15,6 +26,7 @@ z_axis	int,
 als		int,
 lcm		int
 );
+
 create index idx_t_device_log_time on t_device (log_time);
 create index idx_t_device_moteeui on t_device (moteeui);
 create index idx_t_device_seqno on t_device (seqno);

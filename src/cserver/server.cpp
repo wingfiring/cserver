@@ -1,5 +1,6 @@
 #include <cserver/server.h>
 #include <cserver/data.h>
+#include <cserver/db.h>
 
 #include <boost/asio.hpp>
 #include <boost/asio/io_service.hpp>
@@ -57,11 +58,13 @@ namespace csrv{
 			boost::asio::io_service::work wk_aserver, wk_client;
 			std::thread th_aserver, th_client;
 			csrv::Config& config;
+			Database database;
 		public:
 			ServerImp(csrv::Config& cfg) 
 				: wk_aserver(ios_aserver)
 				  , wk_client(ios_client)
 				  , config(cfg)
+				  , database(cfg)
 		{}
 
 			void start(){
@@ -103,8 +106,32 @@ namespace csrv{
 					return;
 				}
 
+				boost::asio::steady_timer read_deadline(ios_aserver);
+
+				struct steady_timer_canceler{
+					boost::asio::steady_timer& timer;
+					steady_timer_canceler(boost::asio::steady_timer& t) : timer(t){};
+					~steady_timer_canceler(){timer.cancel();}
+				};
+
+				std::function<void(const boost::system::error_code&)> check_deadline;
 				for(;;){
+					steady_timer_canceler canceler(read_deadline);
 					tcp::socket socket(ios_aserver);
+
+					check_deadline = [&](const boost::system::error_code& tmec){
+						if (!tmec){
+							if (read_deadline.expires_at() <= std::chrono::steady_clock::now()){
+								BOOST_LOG_TRIVIAL(warning) <<"Timeout, killed socket.";
+								socket.close();
+							}
+							else
+								read_deadline.async_wait(check_deadline);
+						}
+					};
+					read_deadline.expires_from_now(std::chrono::seconds(config.connect_timeout));
+					read_deadline.async_wait(check_deadline);
+
 					for (tcp::resolver::iterator end; itr != end; ++itr) {
 						boost::asio::async_connect(socket, itr, yield[ec]);
 						if (!ec) break;
@@ -116,6 +143,7 @@ namespace csrv{
 					}
 					BOOST_LOG_TRIVIAL(info) <<"Connected to CServer site " << config.aserver_site << ":" << config.aserver_port;
 
+					
 					auto heatbeat_time = std::chrono::steady_clock::now();
 					for(;;){
 						if (heatbeat_time <= std::chrono::steady_clock::now()){
@@ -128,8 +156,9 @@ namespace csrv{
 							BOOST_LOG_TRIVIAL(debug) <<"Heartbeat sent.";
 						}
 
-						Header head;
+						read_deadline.expires_from_now(std::chrono::seconds(config.read_timeout));
 
+						Header head;
 						auto n = boost::asio::async_read(socket, boost::asio::buffer(head.data), yield[ec]);
 						if (has_head_error_(n, head.head)) break;
 
@@ -168,34 +197,13 @@ namespace csrv{
 								break;
 							}
 							if (which_app != "immeAPP")	continue;
+							database.saveDeviceRecord(app);
 
-							if (app.userdata ){
-								auto& udata = *app.userdata;
-								std::vector<uint8_t> buf;
-								if (base64_decode(udata.payload, buf)){
-										std::stringstream sstr;
-										sstr << "Payload (size=" << buf.size() << "):[";
-										for(auto ch : buf)
-											sstr << ' ' << std::setfill('0') << std::setw(2) << std::hex << uint32_t(ch);
-										sstr << " ]";
-										if (!buf.empty() && *buf.begin() == 0x02){
-											BOOST_LOG_TRIVIAL(info) <<"JSON: " << text;
-											BOOST_LOG_TRIVIAL(info) << sstr.str();
-											parse_payload(buf);
-										}
-										else
-											BOOST_LOG_TRIVIAL(debug) << sstr.str();
-								}
-								else
-									BOOST_LOG_TRIVIAL(warning) <<"Bad base64 encoded payload: " << udata.payload;
-							}
-							else {
-								BOOST_LOG_TRIVIAL(warning) <<"No userdata.";
-							}
 						}
 					}
 					sleep_for_(K_retry_sleep_time, yield);
 				}
+				read_deadline.cancel();
 			}
 			void do_accept_(boost::asio::yield_context yield){
 
@@ -246,41 +254,6 @@ namespace csrv{
 					return true;
 				}
 				return false;
-			}
-			void parse_payload(const std::vector<uint8_t>& data){
-				auto end = data.end();
-				for(auto itr =  data.begin(); itr != end;){
-					auto cmd = *itr;
-					if (cmd != 0x02 || ++itr == end) break;
-					auto len = *itr++;
-					if (len > (end - itr))	break;	// no enough value data
-
-					node_info_t node;
-					parse_node_info(&*itr, len, node);
-					print_node(node);
-
-					itr += len;
-				}
-			}
-			void print_node(const node_info_t& node){
-				std::stringstream sstr;
-				sstr << "node_info:{";
-
-				sstr 
-					<< " light_pwm:" << uint32_t(node.light_pwm)
-					<< " voltage:" << uint32_t(node.voltage)
-					<< " current:" << uint32_t(node.current)
-					<< " power:" << uint32_t(node.power)
-					<< " energy:" << uint32_t(node.energy)
-					<< " x-axis:" << int32_t(node.x_axis)
-					<< " y-axis:" << int32_t(node.y_axis)
-					<< " z-axis:" << int32_t(node.z_axis)
-					<< " als:" << int32_t(node.als)
-					<< " lcm:" << int32_t(node.lcm)
-
-					<< " }";
-				BOOST_LOG_TRIVIAL(info) << sstr.str();
-
 			}
 	};
 

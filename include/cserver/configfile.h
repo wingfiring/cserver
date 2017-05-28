@@ -15,6 +15,10 @@ namespace csrv{
 		int aserver_retry_sleep;	// sleep time on reading error from aserver, default 5s
 		int log_level;
 
+		int connect_timeout;
+		int read_timeout;
+
+		std::string db_string;
 	};
 
 	void loadConfig(Config& cfg, const std::string& path);

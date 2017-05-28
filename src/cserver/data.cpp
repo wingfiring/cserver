@@ -40,7 +40,7 @@ namespace csrv{
 			ret.userdata = userdata_t{};
 			auto& udata = *ret.userdata;
 			udata.seqno = unode.get<uint32_t>("seqno");
-			udata.port = unode.get<uint8_t>("port");
+			udata.port = unode.get<uint32_t>("port");
 			udata.payload = unode.get<std::string>("payload");
 
 			auto& mnode = unode.get_child("motetx");

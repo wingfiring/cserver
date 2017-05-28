@@ -18,7 +18,7 @@ namespace csrv{
 	};
 	struct userdata_t{
 		uint32_t seqno;
-		uint8_t port;
+		uint32_t port;
 		std::string payload;
 		motetx_t motetx;
 	};
