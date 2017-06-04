@@ -43,7 +43,7 @@ namespace csrv{
 							if(parse_payload(buf, node)){
 								auto& gwrx = app.gwrx[0];
 								try{
-									pqxx::work(dbconn);
+									pqxx::work w(dbconn);
 									w.prepared("insert_device")
 										(app.moteeui)(gwrx.eui)(udata.seqno)
 										(gwrx.rfch)(gwrx.chan)
