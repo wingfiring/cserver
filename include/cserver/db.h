@@ -15,6 +15,8 @@ namespace csrv{
 		~Database();
 
 		void saveDeviceRecord(const app_t&);
+
+		void writeTest(const std::string& str);
 	};
 	
 }

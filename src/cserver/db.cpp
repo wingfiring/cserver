@@ -2,6 +2,7 @@
 #include <cserver/data.h>
 #include <boost/log/trivial.hpp>
 #include <iomanip>
+#include <iostream>
 
 #include <pqxx/connection.hxx>
 #include <pqxx/transaction.hxx>
@@ -17,7 +18,13 @@ namespace csrv{
 			{
 				dbconn.prepare("insert_device", "INSERT INTO t_device(moteeui, gweui, seqno, rfchan, chan, freq, modu, datr, adr, sf, rssi, snr, "
 						"light_pwm,voltage,current,power,energy,x_axis,y_axis,z_axis,als,lcm)"
-						" values($1,$2,$3,$4,$5,$6,'$7','$8','$9',$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)");
+						" values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)");
+				dbconn.prepare("write_test", "INSERT INTO test(text) values($1)");
+			}
+			void writeTest(const std::string& str){
+				pqxx::work w(dbconn);
+				w.prepared("write_test")(str).exec();
+				w.commit();
 			}
 
 			void saveDeviceRecord(const app_t& app){
@@ -36,12 +43,12 @@ namespace csrv{
 							if(parse_payload(buf, node)){
 								auto& gwrx = app.gwrx[0];
 								try{
-									pqxx::work(dbconn).prepared("insert_device")
+									pqxx::work(dbconn);
+									w.prepared("insert_device")
 										(app.moteeui)(gwrx.eui)(udata.seqno)
 										(gwrx.rfch)(gwrx.chan)
 										(udata.motetx.freq)(udata.motetx.modu)
-										(udata.motetx.datr)(udata.motetx.codr)
-										(udata.motetx.adr)
+										(udata.motetx.datr) (udata.motetx.adr)
 										(udata.port)
 										(gwrx.rssi)(gwrx.lsnr)
 										(int32_t(node.light_pwm))(node.voltage)
@@ -50,6 +57,7 @@ namespace csrv{
 										(node.y_axis)(node.z_axis)
 										(node.als)(int32_t(node.lcm))
 										.exec();
+									w.commit();
 								}catch(...){
 									BOOST_LOG_TRIVIAL(warning) << "Failed to insert db";
 								}
@@ -103,13 +111,22 @@ namespace csrv{
 	};
 
 	Database::Database(const Config& cfg)
-		: m_imp(new DatabaseImp(cfg))
 	{
+		try{
+			m_imp.reset(new DatabaseImp(cfg));
+		} catch(std::exception& e){
+			std::cout << "Database ctor: " << e.what() << std::endl;
+			throw;
+
+		}
 	}
 	Database::~Database() = default;
 
 	void Database::saveDeviceRecord(const app_t& app){
 		m_imp->saveDeviceRecord(app);
+	}
+	void Database::writeTest(const std::string& str){
+		m_imp->writeTest(str);
 	}
 
 

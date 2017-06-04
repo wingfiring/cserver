@@ -65,7 +65,9 @@ namespace csrv{
 				  , wk_client(ios_client)
 				  , config(cfg)
 				  , database(cfg)
-		{}
+		{
+			database.writeTest("Server created.");
+		}
 
 			void start(){
 				start_upstream_();
