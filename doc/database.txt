@@ -52,3 +52,24 @@ colums from:
 id := v.ImmeApp.Moteeui		//big int	
 gwid := v.ImmeApp.Gwrx[0].Eui	//bigint
 seqno : v.ImmeApp.userdata.seqno //int
+
+
+create table if not exists t_meta_table(
+id serial primary key,
+name varchar(64)
+);
+create table if not exists t_meta_field (
+id serial primary key,
+table_id int references t_meta_table(id),
+field_order int,
+field_name varchar(64),
+field_type varchar(64),
+nullable bool,
+default_value varchar(64) null,
+constraint_ varchar(64) null,
+description varchar(128) null,
+constraint uk_t_meta_field_table_id_order
+     unique (table_id, field_order) 
+);
+
+create unique index uk_meta_table_table_order on t_meta_table(table, order);
