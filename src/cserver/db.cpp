@@ -3,6 +3,7 @@
 #include <boost/log/trivial.hpp>
 #include <iomanip>
 #include <iostream>
+#include <exception>
 
 #include <pqxx/connection.hxx>
 #include <pqxx/transaction.hxx>
@@ -20,6 +21,10 @@ namespace csrv{
 						"light_pwm,voltage,current,power,energy,x_axis,y_axis,z_axis,als,lcm)"
 						" values($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)");
 				dbconn.prepare("write_test", "INSERT INTO test(text) values($1)");
+				dbconn.prepare("insert_node_data", 
+						"insert into t_node_data(euid, log_time, rtime, rtime_from_gw, gweuid, seqno, light_pwm, voltage, current, power, energy) "
+						"values($1, CURRENT_TIMESTAMP, $2, $3, $4, $5, $6, $7, $8, $9, $10)");
+
 			}
 			void writeTest(const std::string& str){
 				pqxx::work w(dbconn);
@@ -43,22 +48,42 @@ namespace csrv{
 							if(parse_payload(buf, node)){
 								auto& gwrx = app.gwrx[0];
 								try{
+
+									BOOST_LOG_TRIVIAL(info) 
+										<< " time:" << gwrx.time 
+										<< " moteeui:" << (app.moteeui) 
+										<< " gwrx.eui:" << (gwrx.eui) << " seqno:" << (udata.seqno)
+										<< " rfch:" << (gwrx.rfch) << " chan:" << (gwrx.chan)
+										<< " freq:" << (udata.motetx.freq) << " modu:" << (udata.motetx.modu)
+										<< " datr:" << (udata.motetx.datr)  << " adr:" << (udata.motetx.adr)
+										<< " port:" << (udata.port)
+										<< " rssi:" << (gwrx.rssi) << " lsnr:" << (gwrx.lsnr)
+										<< " light_pwm:" << (int32_t(node.light_pwm)) << " voltage:" << (node.voltage)
+										<< " current:" << (node.current) << " power:" << (node.power)
+										<< " energy:" << (node.energy) << " x_axis:" << (node.x_axis)
+										<< " y_axis:" << (node.y_axis) << " z_axis:" << (node.z_axis)
+										<< " als:" << (node.als) << " lcm:" << (int32_t(node.lcm));
+#if 1
 									pqxx::work w(dbconn);
-									w.prepared("insert_device")
-										(app.moteeui)(gwrx.eui)(udata.seqno)
-										(gwrx.rfch)(gwrx.chan)
-										(udata.motetx.freq)(udata.motetx.modu)
-										(udata.motetx.datr) (udata.motetx.adr)
-										(udata.port)
-										(gwrx.rssi)(gwrx.lsnr)
-										(int32_t(node.light_pwm))(node.voltage)
-										(node.current)(node.power)
-										(node.energy)(node.x_axis)
-										(node.y_axis)(node.z_axis)
-										(node.als)(int32_t(node.lcm))
+									w.prepared("insert_node_data")
+										(app.moteeui)
+										(gwrx.time)
+										(gwrx.timefromgateway)
+										(gwrx.eui)
+										(udata.seqno)
+										(int32_t(node.light_pwm))
+										(node.voltage)
+										(node.current)
+										(node.power)
+										(node.energy)
 										.exec();
 									w.commit();
-								}catch(...){
+#endif
+								}
+								catch(std::exception& e){
+									BOOST_LOG_TRIVIAL(warning) << "Failed to insert db: " << e.what();
+								}
+								catch(...){
 									BOOST_LOG_TRIVIAL(warning) << "Failed to insert db";
 								}
 							}

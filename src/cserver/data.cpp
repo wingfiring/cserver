@@ -60,6 +60,8 @@ namespace csrv{
 
 				gwrx.eui = gnode.get<uint64_t>("eui");
 				gwrx.time = gnode.get<std::string>("time");
+				std::replace(gwrx.time.begin(), gwrx.time.end(), 'T', ' ');
+				std::replace(gwrx.time.begin(), gwrx.time.end(), 'Z', ' ');
 				gwrx.timefromgateway = gnode.get<bool>("timefromgateway");
 				gwrx.chan = gnode.get<uint64_t>("chan");
 				gwrx.rfch = gnode.get<uint32_t>("rfch");
@@ -97,16 +99,10 @@ namespace csrv{
 		memset(this, 0, sizeof(*this));
 	}
 	void parse_node_info(const uint8_t* data, size_t len, node_info_t& node){
-		extract(data, len, node.light_pwm);
 		extract(data, len, node.voltage);
 		extract(data, len, node.current);
 		extract(data, len, node.power);
 		extract(data, len, node.energy);
-		extract(data, len, node.x_axis);
-		extract(data, len, node.y_axis);
-		extract(data, len, node.z_axis);
-		extract(data, len, node.als);
-		extract(data, len, node.lcm);
 	}
 	bool parse_json(app_t& ret, const std::string& json, std::string& app){
 
